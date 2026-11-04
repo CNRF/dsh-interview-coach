@@ -534,7 +534,7 @@ window.__ModuleLoader__.load({
         setError('');
         if (mode === 'fundamentals' && !topic.trim()) return setError('请填写练习主题');
         if (mode === 'scenario' && !topic.trim() && !referenceDirs.length) return setError('请填写场景主题，或选择简历/项目参考文件夹');
-        if (mode !== 'fundamentals' && mode !== 'scenario' && !techStack.trim()) return setError('请填写技术栈');
+        if ((mode === 'mock' || mode === 'resume') && !techStack.trim()) return setError('请填写技术栈');
         if (!outputDir) return setError('请选择输出目录');
         setBusy(true);
         try {
@@ -609,7 +609,6 @@ window.__ModuleLoader__.load({
               : null,
             (sceneCustom || !referenceDirs.length) ? h(Field, { label: '场景主题', hint: '如：设计秒杀系统、线上接口变慢排查；选了参考文件夹后可留空' },
               h('input', { style: css.input, value: topic, onChange: (e) => setTopic(e.target.value) })) : null,
-            h(Field, { label: '技术栈（可选）' }, h('input', { style: css.input, placeholder: '如：Java 后端', value: techStack, onChange: (e) => setTechStack(e.target.value) })),
             h('div', { style: { display: 'flex', gap: 14, flexWrap: 'wrap' } },
               h('div', { style: { flex: 1, minWidth: 160 } }, levelField),
               h('div', { style: { flex: 1, minWidth: 160 } }, countField)),
@@ -618,9 +617,8 @@ window.__ModuleLoader__.load({
         }
         if (mode === 'fundamentals') {
           return h(React.Fragment, null,
-            h(Field, { label: '练习主题', hint: '如：Java 并发、JVM、MySQL、Redis、Spring、计算机网络' },
+            h(Field, { label: '练习主题', hint: '如：Java 并发、JVM、MySQL、Redis、Spring、计算机网络（出该技术的通用高频题）' },
               h('input', { style: css.input, value: topic, onChange: (e) => setTopic(e.target.value) })),
-            h(Field, { label: '技术栈（可选）' }, h('input', { style: css.input, placeholder: '如：Java 后端', value: techStack, onChange: (e) => setTechStack(e.target.value) })),
             h('div', { style: { display: 'flex', gap: 14, flexWrap: 'wrap' } },
               h('div', { style: { flex: 1, minWidth: 160 } }, levelField),
               h('div', { style: { flex: 1, minWidth: 160 } }, countField)),

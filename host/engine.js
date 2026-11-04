@@ -60,10 +60,11 @@ export class InterviewEngine {
   async create(config) {
     validateConfig(config);
     const normalized = normalizeConfig(config);
-    // Summarize reference material before the interview exists so a failure
-    // does not leave a half-created record behind.
+    // 只有模拟面试 / 简历押题 / 场景题才结合个人经历；
+    // 背八股只出技术通用高频题，刷力扣本身就是题库，都不读参考资料。
+    const usesReference = ['mock', 'resume', 'scenario'].includes(normalized.mode);
     let referenceSummary = null;
-    if (normalized.referenceDirs.length) {
+    if (usesReference && normalized.referenceDirs.length) {
       referenceSummary = await this.summarizeReference(normalized.referenceDirs);
     }
     // 场景题 + 参考资料：提取项目清单，出题时按题号轮换项目，避免重复场景
@@ -465,7 +466,7 @@ export class InterviewEngine {
       : null;
     const result = await this.llm.callJSON(practiceQuestionPrompt({
       config: interview.config,
-      referenceSummary: interview.referenceSummary,
+      referenceSummary: interview.config.mode === 'fundamentals' ? null : interview.referenceSummary,
       history,
       assignedProject,
       assignedAngle,
@@ -559,11 +560,15 @@ function normalizeConfig(config) {
   const focus = config.focus || {};
   const num = (v, d) => (Number.isFinite(Number(v)) ? Math.max(0, Math.min(100, Number(v))) : d);
   const mode = Object.keys(MODES).includes(config.mode) ? config.mode : 'mock';
+  const rawTopic = String(config.topic || '').trim().slice(0, 200);
+  const rawStack = String(config.techStack || '').trim().slice(0, 200);
+  // 背八股/场景题：主题即技术方向，无需重复填技术栈
+  const effectiveStack = rawStack || ((mode === 'fundamentals' || mode === 'scenario') ? rawTopic : '');
   return {
     mode,
     topic: String(config.topic || '').trim().slice(0, 200),
     language: ['java', 'python', 'go', 'cpp', 'javascript', 'typescript'].includes(config.language) ? config.language : 'java',
-    techStack: String(config.techStack || '').trim().slice(0, 200),
+    techStack: effectiveStack,
     level: ['mid', 'senior', 'staff', 'architect'].includes(config.level) ? config.level : 'staff',
     questionCount: [5, 10, 15].includes(Number(config.questionCount)) ? Number(config.questionCount) : 10,
     style: ['normal', 'pressure', 'project-deepdive'].includes(config.style) ? config.style : 'normal',

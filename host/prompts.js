@@ -186,7 +186,8 @@ export function practiceQuestionPrompt({ config, referenceSummary, history, assi
     ? `场景主题：${config.topic || '综合'}。请从候选人简历的项目经历中挑选一个真实项目，把其中的技术栈与业务场景改编成一道开放式场景题（系统设计/故障排查/性能优化/工程决策），让候选人在自己熟悉的项目背景下展示深度。**题目必须源自简历中的项目背景，禁止编造简历之外的业务场景**（尤其不要默认套用电商秒杀/订单类俗套案例，除非简历里确实有）。**优先围绕该项目的关键技术决策点/改造点出实战场景题**——例如"为什么选这套微服务/分布式方案、方案对比与取舍、上线出问题如何回滚、数据一致性怎么保证、拆分边界怎么划（如 DDD）"，要候选人复盘真实决策而非背概念。${assignedProject ? `**本题必须基于项目「${assignedProject}」出题**${assignedAngle ? `，**考察角度限定为「${assignedAngle}」**` : ''}；候选人该项目下已出过的题见下方历史，场景切入点不得重复。` : ''}${depthGuide}。`
     : `场景主题：${config.topic}。请出一道开放式场景题（系统设计/故障排查/性能优化/工程决策），要求描述具体场景背景，让候选人给出完整方案。**场景必须紧扣主题「${config.topic}」和技术栈「${config.techStack || '通用'}」，且与下方已出过的题的场景背景不重复，禁止默认套用电商秒杀/订单类俗套案例**。${depthGuide}。`;
   const modeIntro = {
-    fundamentals: `练习主题：${config.topic}。请围绕该主题出一道常见技术面试题，考察对核心概念与原理的理解。`,
+    fundamentals: `练习主题：${config.topic}。请围绕该主题出一道**通用高频技术面试题**，考察对核心概念与原理的理解。
+要求：只考该技术的通用知识点（如语法、原理、机制、最佳实践），**不要结合候选人的具体项目经历、公司或业务场景**——项目相关的考察属于"场景题 / 简历押题 / 模拟面试"。`,
     resume: `请基于候选人的简历背景和${config.jd ? '目标岗位 JD' : '目标岗位'}，出一道面试中最可能被问到的高概率问题，优先围绕项目经历、技术选型与岗位匹配度。`,
     scenario: scenarioIntro,
   }[config.mode] || '';
@@ -197,7 +198,7 @@ export function practiceQuestionPrompt({ config, referenceSummary, history, assi
 - 目标职级：${LEVELS[config.level] || config.level}
 ${config.jd && config.mode !== 'resume' ? `- 目标岗位 JD：\n${config.jd.slice(0, 1500)}` : ''}
 ${config.jd && config.mode === 'resume' ? `- 目标岗位 JD：\n${config.jd.slice(0, 1500)}` : ''}
-${referenceSummary ? `\n候选人背景资料摘要：\n${referenceSummary}\n` : ''}
+${config.mode === 'fundamentals' ? '' : `${referenceSummary ? `\n候选人背景资料摘要：\n${referenceSummary}\n` : ''}`}
 ${NOTE_AUTHORITY}
 
 已出过的题（不要重复）：
