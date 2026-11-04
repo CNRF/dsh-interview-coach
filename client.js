@@ -338,6 +338,7 @@ window.__ModuleLoader__.load({
       const [catalog, setCatalog] = useState(null);
       const [loadError, setLoadError] = useState('');
       const [busy, setBusy] = useState(false);
+      const [query, setQuery] = useState('');
 
       const load = useCallback(() => {
         setBusy(true);
@@ -350,14 +351,21 @@ window.__ModuleLoader__.load({
 
       useEffect(() => { if (open && !catalog) load(); }, [open]);
 
-      const providerValue = value.provider || '';
       const defaultLabel = catalog?.default
         ? `跟随 Harness 默认（${catalog.default.provider} / ${catalog.default.model}）`
         : '跟随 Harness 默认';
       const currentLabel = value.provider
         ? `${value.provider} / ${value.model || '（未选模型）'}`
         : defaultLabel;
-      const flatValue = value.provider && value.model ? `${value.provider}::${value.model}` : '';
+
+      // 扁平模型清单 + 模糊查询（模型过多时纯下拉无法选）
+      const allModels = (catalog?.providers || []).flatMap((p) =>
+        p.models.map((m) => ({ provider: p.id, providerName: p.name, id: m.id, name: m.name || m.id })));
+      const q = query.trim().toLowerCase();
+      const matched = (q
+        ? allModels.filter((m) => `${m.provider} ${m.providerName} ${m.id} ${m.name}`.toLowerCase().includes(q))
+        : allModels).slice(0, 200);
+      const isCurrent = (m) => m.provider === value.provider && m.id === value.model;
 
       return h('div', { style: css.card },
         h('div', { style: { ...css.row, cursor: 'pointer' }, onClick: () => setOpen(!open) },
@@ -371,22 +379,49 @@ window.__ModuleLoader__.load({
             h('button', { style: { ...css.btnGhost, padding: '4px 10px', marginLeft: 8, fontSize: 12 }, onClick: load }, '重试')) : null,
           busy && !catalog ? h('div', { style: css.hint }, '正在读取 DSH 可用模型…') : null,
           catalog ? h(React.Fragment, null,
-            h(Field, { label: '选择具体模型', hint: '一次选中 provider + 模型；不选即跟随 Harness 默认' },
-              h('select', {
+            h(Field, { label: '选择具体模型', hint: `支持模糊查询：输入 provider、模型名或 id 过滤（共 ${allModels.length} 个模型）` },
+              h('input', {
                 style: css.input,
-                value: flatValue,
-                onChange: (e) => {
-                  const v = e.target.value;
-                  if (!v) return onChange({ provider: '', model: '' });
-                  const [provider, model] = v.split('::');
-                  onChange({ provider, model });
+                placeholder: '搜索模型，如 k3 / glm / deepseek / magpie …',
+                value: query,
+                onChange: (e) => setQuery(e.target.value),
+                onKeyDown: (e) => {
+                  if (e.key === 'Escape') setQuery('');
+                  if (e.key === 'Enter' && matched.length) {
+                    const first = matched[0];
+                    onChange({ provider: first.provider, model: first.id });
+                    setQuery('');
+                  }
+                },
+              }),
+              h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 } },
+                h('button', {
+                  style: { ...css.btnGhost, padding: '4px 10px', fontSize: 12 },
+                  onClick: () => { onChange({ provider: '', model: '' }); setQuery(''); },
+                }, '跟随 Harness 默认'),
+                h('span', { style: css.hint }, value.provider ? `已选：${currentLabel}` : defaultLabel)),
+              h('div', {
+                style: {
+                  maxHeight: 240, overflowY: 'auto', marginTop: 8,
+                  border: '1px solid var(--dsw-alias-border-l1)', borderRadius: 8,
                 },
               },
-                h('option', { value: '' }, defaultLabel),
-                (catalog.providers || []).filter((p) => p.models.length).map((p) =>
-                  h('optgroup', { key: p.id, label: `${p.name}（${p.id}）` },
-                    p.models.map((m) => h('option', { key: `${p.id}::${m.id}`, value: `${p.id}::${m.id}` },
-                      `${m.name}${m.name !== m.id ? ` · ${m.id}` : ''}`)))))),
+                matched.length
+                  ? matched.map((m) => h('button', {
+                      key: `${m.provider}::${m.id}`,
+                      style: {
+                        display: 'flex', width: '100%', gap: 8, alignItems: 'center',
+                        padding: '6px 10px', border: 'none', textAlign: 'left', cursor: 'pointer',
+                        background: isCurrent(m) ? 'color-mix(in srgb, var(--dsw-alias-brand-primary) 15%, transparent)' : 'transparent',
+                        color: 'var(--dsw-alias-label-primary)', fontSize: 13,
+                      },
+                      onClick: () => { onChange({ provider: m.provider, model: m.id }); setQuery(''); },
+                    },
+                      h('span', { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+                        `${m.name}${m.name !== m.id ? ` · ${m.id}` : ''}`),
+                      h('span', { style: { ...css.hint, flex: '0 0 auto' } }, m.provider)))
+                  : h('div', { style: { padding: '10px 12px', ...css.hint } },
+                      query ? `没有匹配「${query}」的模型` : '没有可选的模型'))),
             h('div', { style: { ...css.hint, marginTop: 8 } }, '修改后立即生效于后续出题、评分与总结；选「跟随 Harness 默认」恢复默认模型'),
             h(Field, { label: '手动指定（可选）', hint: '列表里没有的模型可直接填：先填 provider，再填模型 id' },
               h('div', { style: css.row },
