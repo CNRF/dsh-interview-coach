@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { InterviewStore } from './host/store.js';
 import { createLlmCaller } from './host/llm.js';
 import { InterviewEngine } from './host/engine.js';
-import { writeReport } from './host/report.js';
+import { writeReport, renderMarkdown } from './host/report.js';
 import { registerRoutes } from './host/routes.js';
 import { LEETCODE_TOP_100_GROUPS, LEETCODE_TOP_100_SOURCE } from './host/leetcode.js';
 import { edgeTts, EDGE_VOICES } from './host/edge-tts.js';
@@ -130,6 +130,17 @@ export function apply(ctx) {
       rate: Math.max(-50, Math.min(100, Number(rate) || 0)),
       pitch: Math.max(-50, Math.min(50, Number(pitch) || 0)),
     }),
+    exportMarkdown: (ids) => (Array.isArray(ids) ? ids : [])
+      .map((id) => engine.get(id))
+      .filter(Boolean)
+      .map((iv) => renderMarkdown(iv))
+      .join('\n\n---\n\n'),
+    removeMany: (ids) => {
+      const list = Array.isArray(ids) ? ids : [];
+      let removed = 0;
+      for (const id of list) { try { engine.remove(id); removed++; } catch { /* skip */ } }
+      return { removed };
+    },
     finish: (id) => engine.finish(id, writeReport),
     abandon: (id) => engine.abandon(id),
     remove: (id) => (engine.remove(id), { removed: true }),

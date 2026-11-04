@@ -15,7 +15,15 @@
   "dependencies": {
     "ws": "^8.18.0"
   },
-  "keywords": ["deepseek", "harness", "dsh", "dsh-plugin", "interview", "voice", "coach"],
+  "keywords": [
+    "deepseek",
+    "harness",
+    "dsh",
+    "dsh-plugin",
+    "interview",
+    "voice",
+    "coach"
+  ],
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
@@ -31,14 +39,19 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
+    "docs",
     "README.md"
   ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true,
-      "inject": ["@deepseek-ai/dsh-client-locale"]
+      "inject": [
+        "@deepseek-ai/dsh-client-locale"
+      ]
     }
   }
 }

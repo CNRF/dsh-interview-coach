@@ -339,6 +339,7 @@ window.__ModuleLoader__.load({
       const [loadError, setLoadError] = useState('');
       const [busy, setBusy] = useState(false);
       const [query, setQuery] = useState('');
+      const [editing, setEditing] = useState(false);
 
       const load = useCallback(() => {
         setBusy(true);
@@ -366,6 +367,11 @@ window.__ModuleLoader__.load({
         ? allModels.filter((m) => `${m.provider} ${m.providerName} ${m.id} ${m.name}`.toLowerCase().includes(q))
         : allModels).slice(0, 200);
       const isCurrent = (m) => m.provider === value.provider && m.id === value.model;
+      // 未聚焦时输入框显示已选模型（回显），聚焦后清空进入搜索，避免回显文本被当成关键词
+      const selectedLabel = allModels.find((m) => isCurrent(m))
+        ? (() => { const m = allModels.find((x) => isCurrent(x)); return m.name !== m.id ? `${m.name} · ${m.id}` : m.id; })()
+        : (value.provider ? `${value.provider} / ${value.model}` : '');
+      const inputValue = editing ? query : selectedLabel;
 
       return h('div', { style: css.card },
         h('div', { style: { ...css.row, cursor: 'pointer' }, onClick: () => setOpen(!open) },
@@ -383,13 +389,16 @@ window.__ModuleLoader__.load({
               h('input', {
                 style: css.input,
                 placeholder: '搜索模型，如 k3 / glm / deepseek / magpie …',
-                value: query,
+                value: inputValue,
+                onFocus: () => { setEditing(true); setQuery(''); },
+                onBlur: () => { setEditing(false); },
                 onChange: (e) => setQuery(e.target.value),
                 onKeyDown: (e) => {
-                  if (e.key === 'Escape') setQuery('');
+                  if (e.key === 'Escape') { setQuery(''); }
                   if (e.key === 'Enter' && matched.length) {
                     const first = matched[0];
                     onChange({ provider: first.provider, model: first.id });
+                    // 仍保持聚焦搜索态：清空关键词，失焦后再回显已选模型
                     setQuery('');
                   }
                 },
@@ -397,9 +406,9 @@ window.__ModuleLoader__.load({
               h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 } },
                 h('button', {
                   style: { ...css.btnGhost, padding: '4px 10px', fontSize: 12 },
-                  onClick: () => { onChange({ provider: '', model: '' }); setQuery(''); },
+                  onClick: () => { onChange({ provider: '', model: '' }); setQuery(''); setEditing(false); },
                 }, '跟随 Harness 默认'),
-                h('span', { style: css.hint }, value.provider ? `已选：${currentLabel}` : defaultLabel)),
+                h('span', { style: css.hint }, value.provider ? `✅ 已选：${currentLabel}` : defaultLabel)),
               h('div', {
                 style: {
                   maxHeight: 240, overflowY: 'auto', marginTop: 8,
@@ -415,7 +424,12 @@ window.__ModuleLoader__.load({
                         background: isCurrent(m) ? 'color-mix(in srgb, var(--dsw-alias-brand-primary) 15%, transparent)' : 'transparent',
                         color: 'var(--dsw-alias-label-primary)', fontSize: 13,
                       },
-                      onClick: () => { onChange({ provider: m.provider, model: m.id }); setQuery(''); },
+                      onMouseDown: (e) => e.preventDefault(),
+                      onClick: () => {
+                        onChange({ provider: m.provider, model: m.id });
+                        setQuery('');
+                        setEditing(false);
+                      },
                     },
                       h('span', { style: { flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
                         `${m.name}${m.name !== m.id ? ` · ${m.id}` : ''}`),
@@ -1012,17 +1026,55 @@ window.__ModuleLoader__.load({
     // ---------- History ----------
     function History({ onResume, refreshKey }) {
       const [items, setItems] = useState([]);
+      const [modeFilter, setModeFilter] = useState('');
+      const [selected, setSelected] = useState([]);
+      const [busy, setBusy] = useState(false);
+      const [notice, setNotice] = useState('');
       useEffect(() => { request('/interviews').then((d) => setItems(d.items || [])).catch(() => {}); }, [refreshKey]);
-      const completed = items.filter((i) => i.status === 'completed' && i.totalScore != null).slice().reverse();
 
-      const exportItem = async (id) => {
-        const data = await request(`/interviews/${id}`);
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const visible = modeFilter ? items.filter((i) => (i.mode || 'mock') === modeFilter) : items;
+      const completed = items.filter((i) => i.status === 'completed' && i.totalScore != null).slice().reverse();
+      const selectedSet = new Set(selected);
+      const toggle = (id, on) => setSelected(on ? [...new Set([...selected, id])] : selected.filter((x) => x !== id));
+      const allChecked = visible.length > 0 && visible.every((i) => selectedSet.has(i.id));
+
+      const download = (text, filename) => {
+        const blob = new Blob([text], { type: 'text/markdown; charset=utf-8' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = `interview-${id}.json`;
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(a.href);
+      };
+
+      const exportOne = async (i) => {
+        setBusy(true);
+        try {
+          const md = await (await fetch(`${API}/interviews/${i.id}/markdown`)).text();
+          download(md, `面试记录-${MODE_NAMES[i.mode] || '模拟面试'}-${i.createdAt.slice(0, 10)}.md`);
+        } catch (e) { setNotice(`导出失败：${e.message}`); } finally { setBusy(false); }
+      };
+
+      const exportSelected = async () => {
+        if (!selected.length) return;
+        setBusy(true);
+        try {
+          const { markdown } = await request('/interviews/export', { body: { ids: selected } });
+          download(markdown, `面试记录-共${selected.length}场-${new Date().toISOString().slice(0, 10)}.md`);
+          setNotice(`已导出 ${selected.length} 份记录（Markdown）`);
+        } catch (e) { setNotice(`导出失败：${e.message}`); } finally { setBusy(false); }
+      };
+
+      const deleteSelected = async () => {
+        if (!selected.length) return;
+        if (!window.confirm(`确定删除选中的 ${selected.length} 条记录？该操作不可恢复。`)) return;
+        setBusy(true);
+        try {
+          const { removed } = await request('/interviews/bulk-delete', { body: { ids: selected } });
+          setItems(items.filter((x) => !selectedSet.has(x.id)));
+          setSelected([]);
+          setNotice(`已删除 ${removed} 条记录`);
+        } catch (e) { setNotice(`删除失败：${e.message}`); } finally { setBusy(false); }
       };
 
       const trend = completed.length >= 2 ? (() => {
@@ -1038,19 +1090,47 @@ window.__ModuleLoader__.load({
       })() : null;
 
       return h('div', { style: css.page },
-        h('div', { style: css.title }, '历史记录'),
+        h('div', { style: { ...css.row }, },
+          h('div', { style: css.title }, '历史记录'),
+          h('div', { style: { marginLeft: 'auto' } },
+            h('select', {
+              style: { ...css.input, width: 160 },
+              value: modeFilter,
+              onChange: (e) => { setModeFilter(e.target.value); setSelected([]); },
+            },
+              h('option', { value: '' }, `全部类型（${items.length}）`),
+              MODE_DEFS.map((m) => h('option', { key: m.id, value: m.id }, `${m.name}（${items.filter((i) => (i.mode || 'mock') === m.id).length}）`))))),
         trend ? h('div', { style: css.card }, h('div', { style: { fontWeight: 600, marginBottom: 8 } }, '得分趋势'), trend)
           : h('div', { style: css.card }, h('div', { style: css.hint }, '完成两场以上练习后展示得分趋势')),
-        items.length === 0 ? h('div', { style: css.card }, '还没有记录') : null,
-        items.map((i) => h('div', { key: i.id, style: { ...css.card, ...css.row } },
-          h('div', { style: { flex: 1 } },
+        visible.length ? h('div', { style: { ...css.card, ...css.row } },
+          h('label', { style: { ...css.hint, cursor: 'pointer', ...css.row } },
+            h('input', {
+              type: 'checkbox', checked: allChecked,
+              onChange: (e) => setSelected(e.target.checked ? [...new Set([...selected, ...visible.map((i) => i.id)])] : []),
+            }), `全选当前 ${visible.length} 条`),
+          h('div', { style: { marginLeft: 'auto', ...css.row } },
+            h('button', { style: { ...css.btnGhost, padding: '6px 12px', fontSize: 12 }, disabled: busy || !selected.length, onClick: exportSelected }, `导出所选（${selected.length}）`),
+            h('button', { style: { ...css.btnDanger, padding: '6px 12px' }, disabled: busy || !selected.length, onClick: deleteSelected }, `删除所选（${selected.length}）`))) : null,
+        notice ? h('div', { style: { ...css.ok, marginBottom: 8 } }, notice) : null,
+        visible.length === 0 ? h('div', { style: css.card }, items.length ? '该类型下没有记录' : '还没有记录') : null,
+        visible.map((i) => h('div', { key: i.id, style: { ...css.card, ...css.row } },
+          h('input', {
+            type: 'checkbox', checked: selectedSet.has(i.id),
+            onChange: (e) => toggle(i.id, e.target.checked),
+          }),
+          h('div', { style: { flex: 1, marginLeft: 6 } },
             h('div', { style: { fontWeight: 600 } },
               h('span', { style: css.tag }, MODE_NAMES[i.mode] || '模拟面试'),
               `${i.topic || i.techStack} · ${i.totalScore != null ? `${i.totalScore} 分` : i.status === 'in-progress' ? '进行中' : '已作废'}`),
             h('div', { style: css.hint }, `${i.createdAt.slice(0, 16).replace('T', ' ')} · ${i.answered}/${i.questionCount} 题`)),
           i.status === 'in-progress' ? h('button', { style: css.btn, onClick: () => onResume(i.id) }, '继续') : null,
-          h('button', { style: css.btnGhost, onClick: () => exportItem(i.id) }, '导出'),
-          h('button', { style: css.btnDanger, onClick: async () => { await request(`/interviews/${i.id}`, { method: 'DELETE' }); setItems(items.filter((x) => x.id !== i.id)); } }, '删除'))));
+          h('button', { style: css.btnGhost, disabled: busy, onClick: () => exportOne(i) }, '导出 MD'),
+          h('button', { style: css.btnDanger, onClick: async () => {
+            if (!window.confirm('确定删除这条记录？')) return;
+            await request(`/interviews/${i.id}`, { method: 'DELETE' });
+            setItems(items.filter((x) => x.id !== i.id));
+            setSelected(selected.filter((x) => x !== i.id));
+          } }, '删除'))));
     }
 
     // ---------- Root panel ----------

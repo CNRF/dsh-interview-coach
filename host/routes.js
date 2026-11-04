@@ -37,6 +37,14 @@ async function handle(api, req, res) {
     const result = await api.listProjects(body.referenceDirs, body.debug === true);
     return send(res, 200, Array.isArray(result) ? { projects: result } : result);
   }
+  if (method === 'POST' && sub === '/interviews/export') {
+    const body = await readBody(req);
+    return send(res, 200, { markdown: api.exportMarkdown(body.ids) });
+  }
+  if (method === 'POST' && sub === '/interviews/bulk-delete') {
+    const body = await readBody(req);
+    return send(res, 200, api.removeMany(body.ids));
+  }
   if (method === 'GET' && sub === '/leetcode') return send(res, 200, api.leetcodeCatalog());
   if (method === 'GET' && sub === '/models') return send(res, 200, await api.listModels());
   if (method === 'GET' && sub === '/settings') return send(res, 200, api.getSettings());
@@ -54,6 +62,12 @@ async function handle(api, req, res) {
   if (match) {
     const [, id, , action] = match;
     if (method === 'GET' && !action) return send(res, 200, api.get(id) || notFound());
+    if (method === 'GET' && action === 'markdown') {
+      const md = api.exportMarkdown([id]);
+      res.writeHead(200, { 'content-type': 'text/markdown; charset=utf-8' });
+      res.end(md);
+      return;
+    }
     if (method === 'DELETE' && !action) return send(res, 200, api.remove(id));
     if (method === 'POST' && action === 'answer') {
       const body = await readBody(req);

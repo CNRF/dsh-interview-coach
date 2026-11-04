@@ -211,16 +211,28 @@ ${historyText}
 /** 用户主动求助时生成参考回答（答题前使用，不影响评分流程）。 */
 export function referenceAnswerPrompt({ config, question, problem, language, isSelfIntro }) {
   const isLeetCode = Boolean(problem);
+  const level = LEVELS[config.level] || config.level;
+  const depth = LEVEL_DEPTH[config.level] || '';
   return {
-    system: '你是一位资深技术面试官，候选人答不上来正在向你求助。请给出可以直接复述的参考答案。',
+    system: '你是一位资深技术面试官，候选人答不上来正在向你求助。请给出提纲 + 完整参考答案，深度严格匹配候选人目标职级。',
     prompt: `${isSelfIntro ? '自我介绍环节的要求' : isLeetCode ? `力扣题：${problem.id}. ${problem.title}（${problem.category}，${problem.difficulty}）` : '面试题目'}：${question}
 
-${isLeetCode ? `作答语言：${language || 'Java'}` : `技术栈：${config.techStack || '通用'}；目标职级：${LEVELS[config.level] || config.level}`}
+${isLeetCode ? `作答语言：${language || 'Java'}` : `技术栈：${config.techStack || '通用'}；目标职级：${level}`}
+${depth}
+
+要求：
+1. outline：3-5 个要点提纲，每个要点一行，保留原有的精简风格
+2. answer：**完整参考答案**，不是摘要——按上述职级深度充分展开（一般 300-600 字，复杂题可更长）：
+   - 先给结论，再分点展开原因与细节
+   - 必须包含该职级应有的深度：底层原理、关键机制、边界情况、取舍分析（按上面 depth 约束决定深度，不要超出也不要低于职级）
+   - 有数据就说数据（如 QPS、耗时、容量估算），有方案对比就说优缺点
+   - 用第一人称"我会/我们"，像候选人在面试中口述
+3. pitfalls：常见坑或加分点，一句话
 
 请输出一个 JSON 代码块，不要其它文字：
 {
   "outline": "3-5 个要点的答题提纲（每个要点一行，用 \\n 分隔）",
-  "answer": "${isLeetCode ? '完整解法：先讲思路，再给可用代码，最后给复杂度分析' : '一段可以直接照着说的参考答案，180 字以内，符合该职级表达习惯'}",
+  "answer": "${isLeetCode ? '完整解法：思路 → 可运行代码 → 复杂度分析与边界讨论' : '可直接照着说的完整参考答案（300-600 字，按职级深度展开）'}",
   "pitfalls": "这个问题的常见坑或加分点，一句话"
 }`,
   };

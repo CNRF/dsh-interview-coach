@@ -29,7 +29,7 @@ function headerLines(interview) {
   ].filter(Boolean);
 }
 
-function renderMarkdown(iv) {
+export function renderMarkdown(iv) {
   const lines = ['# 面试记录', '', ...headerLines(iv).map((l) => `- ${l}`), ''];
   lines.push(`## 总分：${iv.totalScore ?? '-'} / 100`, '');
   if (iv.summary) lines.push('## 面试总结', '', iv.summary, '');
@@ -42,8 +42,10 @@ function renderMarkdown(iv) {
   for (const q of iv.questions) {
     const qLabel = [q.project && `项目：${q.project}`, q.angle].filter(Boolean).join(' · ');
     lines.push(`## 第 ${q.index + 1} 题${qLabel ? `（${qLabel}）` : ''}：${q.question}`, '');
-    if (q.score != null) {
+    if (q.score != null && q.scored?.dims) {
       lines.push(`**得分：${q.score} / 100**（准确性 ${q.scored.dims.accuracy} · 深度 ${q.scored.dims.depth} · 表达 ${q.scored.dims.expression} · 完整性 ${q.scored.dims.structure}）`, '');
+    } else if (q.score != null) {
+      lines.push(`**得分：${q.score} / 100**`, '');
     }
     const attempts = q.attempts?.length ? q.attempts : (q.answer ? [{ answer: q.answer, scored: q.scored }] : []);
     if (attempts.length > 1) {
