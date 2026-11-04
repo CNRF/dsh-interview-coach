@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "语音面试助手",
+    "description": "语音面试演练：选择技术栈与参考资料，语音问答，逐题百分制打分，导出面试记录文档。"
+  },
+  "nav": "面试助手",
+  "setup": {
+    "title": "新建面试",
+    "techStack": "技术栈",
+    "level": "目标职级",
+    "questions": "题量",
+    "style": "面试风格",
+    "jd": "目标岗位 JD（可选）",
+    "focus": "考察配比",
+    "reference": "参考文件夹（可选）",
+    "outputDir": "输出目录",
+    "start": "开始面试",
+    "resume": "继续面试"
+  },
+  "room": {
+    "startAnswer": "开始回答",
+    "finishAnswer": "回答完毕",
+    "submit": "提交回答",
+    "transcribing": "识别中…",
+    "thinking": "面试官思考中…",
+    "finish": "结束面试"
+  },
+  "history": { "title": "历史记录" }
+}

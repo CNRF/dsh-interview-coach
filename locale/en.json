@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "title": "Interview Coach",
+    "description": "Voice interview practice: spoken Q&A, per-answer 100-point scoring, and exportable interview reports."
+  },
+  "nav": "Interview Coach",
+  "setup": {
+    "title": "New Interview",
+    "techStack": "Tech stack",
+    "level": "Target level",
+    "questions": "Questions",
+    "style": "Interview style",
+    "jd": "Target job description (optional)",
+    "focus": "Focus mix",
+    "reference": "Reference folders (optional)",
+    "outputDir": "Output directory",
+    "start": "Start interview",
+    "resume": "Resume interview"
+  },
+  "room": {
+    "startAnswer": "Start answer",
+    "finishAnswer": "Finish answer",
+    "submit": "Submit answer",
+    "transcribing": "Transcribing…",
+    "thinking": "Interviewer is thinking…",
+    "finish": "Finish interview"
+  },
+  "history": { "title": "History" }
+}

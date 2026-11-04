@@ -1,0 +1,4 @@
+- insert:
+    - id: interview-coach
+      name: dsh-interview-coach
+      config: {}
