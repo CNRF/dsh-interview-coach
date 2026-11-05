@@ -61,7 +61,8 @@
 ## 排障
 
 - **插件面板消失 / 接口 404**：多为宿主重启后 `cordis.patch.yml` 中的插件行被第三方工具重写。在插件管理中对 `dsh-interview-coach` 执行一次卸载再安装即可恢复（数据不受影响）
-- **改了 client.js 界面没更新**：宿主只在启动时读取客户端代码，需要完全退出并重启 DeepSeek Harness（刷新页面不够）；或运行 `pnpm run dev:web` 启用 HMR
+- **改了代码没生效**：本地目录安装时，profile 的 `node_modules/<包名>` 是**安装时的副本**，不是指向仓库的软链。修改仓库后需要重新安装插件包（或在插件管理中卸载再安装），再完全退出并重启 DeepSeek Harness；仅关闭/开启插件不会重新加载代码
+- **改了 client.js 界面没更新**：同理，需要完全退出并重启 DeepSeek Harness（刷新页面不够）
 
 ## License
 

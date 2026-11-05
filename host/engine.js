@@ -313,7 +313,7 @@ export class InterviewEngine {
     if (stage === 'selfintro') {
       prompt = selfIntroPrompt();
       key = 'selfintro';
-    } else if (stage === 'followup' || stage === 'question') {
+    } else if (stage === 'followup' || stage === 'question' || stage === 'review') {
       const q = interview.questions[interview.currentQuestionIndex];
       if (!q) throw new Error('当前没有可参考的问题');
       if (stage === 'followup') {
@@ -321,6 +321,7 @@ export class InterviewEngine {
         prompt = chain.length ? chain[chain.length - 1].question : q.followup?.question;
         key = `q${q.index}-followup-${chain.length}`;
       } else {
+        // review 阶段（含重新作答）仍针对当前题生成参考
         prompt = q.question;
         key = `q${q.index}`;
         problem = q.problem ?? null;
