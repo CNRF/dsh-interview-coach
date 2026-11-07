@@ -17,11 +17,13 @@ export function createLlmCaller(ctx, options = {}) {
     return { provider: sel.provider, model: sel.model };
   }
 
-  async function callText({ system, prompt, temperature = 0.7, maxTokens = 4096, signal }) {
+  async function callText({ system, prompt, maxTokens = 4096, signal }) {
     const llm = llmService();
     if (!llm) throw new Error('LLM service unavailable in this profile');
     const route = currentRoute();
     if (!route) throw new Error('No default model configured in Harness settings');
+    // 采样参数（temperature 等）不自行设置，沿用 DSH 模型/适配器的默认配置，
+    // 避免不同模型对参数的限制（如仅允许 temperature=1）导致调用失败。
     let text = '';
     let failure;
     for await (const chunk of llm.stream({
@@ -29,7 +31,6 @@ export function createLlmCaller(ctx, options = {}) {
       model: route.model,
       system,
       messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
-      temperature,
       maxTokens,
       signal,
     })) {
