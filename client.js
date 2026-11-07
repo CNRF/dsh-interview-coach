@@ -249,7 +249,7 @@ window.__ModuleLoader__.load({
         ? { ok: true, text: `模型连接正常（${status.llm.provider}/${status.llm.model}）` }
         : { ok: false, text: '未检测到可用的模型连接，请先在 Harness 设置中配置默认模型' });
       if (!status.speech.available) {
-        items.push({ ok: false, text: '语音服务未启用：请在插件管理中启用官方「Voice Input」插件包（本地 SenseVoice 语音识别）' });
+        items.push({ ok: false, text: '语音服务未启用：请在插件管理（侧边栏「插件」→ Official 区）找到「Voice Input」并开启；注意：DSH 升级后可选插件包可能被重置为关闭，需要重新开启' });
       } else {
         const provider = speech?.providers?.find((p) => p.id === speech.selection?.providerId) || speech?.providers?.[0];
         const phase = provider?.preparation?.phase;
