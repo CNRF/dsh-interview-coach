@@ -1,6 +1,7 @@
 import { newId } from './store.js';
 import {
   selfIntroPrompt,
+  FUNDAMENTAL_ANGLES,
   summarizeReferencePrompt,
   nextQuestionPrompt,
   scoreAnswerPrompt,
@@ -46,7 +47,26 @@ export class InterviewEngine {
       answered: iv.questions.filter((q) => q.score != null).length + (iv.selfIntro ? 1 : 0),
       totalScore: iv.totalScore ?? null,
       reportDir: iv.reportDir ?? null,
+      current: iv.status === 'in-progress' ? this.currentLabel(iv) : null,
     }));
+  }
+
+  /** 未完成练习列表展示用的当前环节摘要。 */
+  currentLabel(iv) {
+    const q = iv.questions?.[iv.currentQuestionIndex];
+    switch (iv.stage) {
+      case 'selfintro': return '自我介绍';
+      case 'followup': {
+        const chain = q?.followups || [];
+        const text = chain.length ? chain[chain.length - 1].question : q?.followup?.question;
+        return text ? `追问：${text}` : '追问中';
+      }
+      case 'question': return q?.question ?? null;
+      case 'picking': return '选题中';
+      case 'review': return `点评中：${q?.question ?? ''}`;
+      case 'done': return '待结束';
+      default: return null;
+    }
   }
 
   get(id) {
@@ -462,9 +482,15 @@ export class InterviewEngine {
     // 项目 × 角度对角线轮换：每题换一个项目、同时换一个考察角度，
     // 项目问完一圈后角度继续错开，覆盖面最大且不重复。
     const assignedProject = projects.length ? projects[i % projects.length] : null;
-    const assignedAngle = interview.config.mode === 'scenario'
+    let assignedAngle = interview.config.mode === 'scenario'
       ? SCENARIO_ANGLES[i % SCENARIO_ANGLES.length]
       : null;
+    if (interview.config.mode === 'fundamentals') {
+      // 每次开练随机选一个起始角度，之后按题序轮换：
+      // 避免同一主题反复命中最经典的题目（如 Java 并发总是 volatile）
+      const start = interview.fundamentalAngleStart ?? (interview.fundamentalAngleStart = Math.floor(Math.random() * FUNDAMENTAL_ANGLES.length));
+      assignedAngle = FUNDAMENTAL_ANGLES[(start + i) % FUNDAMENTAL_ANGLES.length];
+    }
     const result = await this.llm.callJSON(practiceQuestionPrompt({
       config: interview.config,
       referenceSummary: interview.config.mode === 'fundamentals' ? null : interview.referenceSummary,

@@ -452,7 +452,7 @@ window.__ModuleLoader__.load({
     }
 
     // ---------- Setup form ----------
-    function Setup({ uiWorkspace, status, speech, onRefreshStatus, onStart, resumeInterview }) {
+    function Setup({ uiWorkspace, status, speech, onRefreshStatus, onStart, resumeInterviews = [] }) {
       const [mode, setMode] = useState('mock');
       const [topic, setTopic] = useState('');
       const [language, setLanguage] = useState('java');
@@ -670,12 +670,17 @@ window.__ModuleLoader__.load({
           },
         }),
         h(TtsSettings, null),
-        resumeInterview ? h('div', { style: css.card },
-          h('div', { style: { fontWeight: 600, marginBottom: 6 } }, '有一场未完成的练习'),
-          h('div', { style: css.hint }, `${MODE_NAMES[resumeInterview.mode] || '模拟面试'} · ${resumeInterview.topic || resumeInterview.techStack} · ${resumeInterview.answered} 题已答 · ${resumeInterview.createdAt.slice(0, 16).replace('T', ' ')}`),
-          h('div', { style: { ...css.row, marginTop: 10 } },
-            h('button', { style: css.btn, onClick: () => onStart({ id: resumeInterview.id, resume: true }) }, '继续'),
-            h('button', { style: css.btnDanger, onClick: async () => { await request(`/interviews/${resumeInterview.id}/abandon`, { body: {} }); onRefreshStatus(); } }, '作废'))) : null,
+        resumeInterviews.length ? h('div', { style: css.card },
+          h('div', { style: { fontWeight: 600, marginBottom: 6 } }, `有 ${resumeInterviews.length} 场未完成的练习`),
+          resumeInterviews.map((iv) => h('div', { key: iv.id, style: { ...css.row, padding: '6px 0', borderTop: '1px solid var(--dsw-alias-border-l1)' } },
+            h('div', { style: { flex: 1, minWidth: 0 } },
+              h('div', { style: css.hint }, `${MODE_NAMES[iv.mode] || '模拟面试'} · ${iv.topic || iv.techStack} · ${iv.answered} 题已答 · ${iv.createdAt.slice(0, 16).replace('T', ' ')}`),
+              iv.current ? h('div', {
+                style: { fontSize: 12, color: 'var(--dsw-alias-label-primary)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+                title: iv.current,
+              }, `当前：${iv.current.slice(0, 60)}${iv.current.length > 60 ? '…' : ''}`) : null),
+            h('button', { style: { ...css.btn, padding: '4px 14px', fontSize: 12, flexShrink: 0 }, onClick: () => onStart({ id: iv.id, resume: true }) }, '继续'),
+            h('button', { style: { ...css.btnDanger, flexShrink: 0 }, onClick: async () => { await request(`/interviews/${iv.id}/abandon`, { body: {} }); onRefreshStatus(); } }, '作废')))) : null,
         h('div', { style: css.card },
           h(Field, { label: '练习模式' },
             h('div', { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
@@ -1139,7 +1144,7 @@ window.__ModuleLoader__.load({
       const [status, setStatus] = useState(null);
       const [speech, setSpeech] = useState(null);
       const [activeId, setActiveId] = useState(null);
-      const [resumable, setResumable] = useState(null);
+      const [resumable, setResumable] = useState([]);
       const [refreshKey, setRefreshKey] = useState(0);
 
       const refreshStatus = useCallback(async () => {
@@ -1147,7 +1152,8 @@ window.__ModuleLoader__.load({
           setStatus(await request('/status'));
           setSpeech(await request('/speech'));
           const { items } = await request('/interviews');
-          setResumable((items || []).find((i) => i.status === 'in-progress') || null);
+          // 展示全部进行中的练习（同类型可能有多场暂离，只显示第一场会丢其他场）
+          setResumable((items || []).filter((i) => i.status === 'in-progress'));
         } catch { /* server not ready */ }
       }, []);
 
@@ -1184,7 +1190,7 @@ window.__ModuleLoader__.load({
           h('button', { style: { ...(view === 'history' ? css.btn : css.btnGhost), outline: 'none' }, onClick: (e) => { setView('history'); e.currentTarget.blur(); } }, '历史记录')),
         h('div', { style: css.scroll },
           view === 'setup'
-            ? h(Setup, { uiWorkspace, status, speech, onRefreshStatus: refreshStatus, onStart: startInterview, resumeInterview: resumable })
+            ? h(Setup, { uiWorkspace, status, speech, onRefreshStatus: refreshStatus, onStart: startInterview, resumeInterviews: resumable })
             : h(History, { onResume: (id) => { setActiveId(id); setView('room'); }, refreshKey })));
     }
 

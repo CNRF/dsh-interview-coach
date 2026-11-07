@@ -167,6 +167,17 @@ ${referenceSummary}
   };
 }
 
+export const FUNDAMENTAL_ANGLES = [
+  '核心概念定义与术语辨析',
+  '底层原理与实现机制',
+  '相似概念的对比与取舍',
+  '使用场景与最佳实践',
+  '常见陷阱与错误用法',
+  '性能影响与资源权衡',
+  '生产环境中的典型问题',
+  '设计动机与演进历史',
+];
+
 export const SCENARIO_ANGLES = [
   '架构设计与技术选型',
   '性能优化与高并发',
@@ -187,6 +198,7 @@ export function practiceQuestionPrompt({ config, referenceSummary, history, assi
     : `场景主题：${config.topic}。请出一道开放式场景题（系统设计/故障排查/性能优化/工程决策），要求描述具体场景背景，让候选人给出完整方案。**场景必须紧扣主题「${config.topic}」和技术栈「${config.techStack || '通用'}」，且与下方已出过的题的场景背景不重复，禁止默认套用电商秒杀/订单类俗套案例**。${depthGuide}。`;
   const modeIntro = {
     fundamentals: `练习主题：${config.topic}。请围绕该主题出一道**通用高频技术面试题**，考察对核心概念与原理的理解。
+${assignedAngle ? `**本题的考察角度限定为「${assignedAngle}」**，请从该角度切入，不要只出该主题下最常被问的经典问题。` : ''}
 要求：只考该技术的通用知识点（如语法、原理、机制、最佳实践），**不要结合候选人的具体项目经历、公司或业务场景**——项目相关的考察属于"场景题 / 简历押题 / 模拟面试"。`,
     resume: `请基于候选人的简历背景和${config.jd ? '目标岗位 JD' : '目标岗位'}，出一道面试中最可能被问到的高概率问题，优先围绕项目经历、技术选型与岗位匹配度。`,
     scenario: scenarioIntro,

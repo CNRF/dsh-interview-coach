@@ -78,7 +78,7 @@ export function apply(ctx) {
       const route = llm.currentRoute();
       const speechSnap = speech()?.snapshot();
       return {
-        build: '2026-11-05a',
+        build: '2026-11-07a',
         llm: { available: llm.available && Boolean(route), provider: route?.provider ?? null, model: route?.model ?? null },
         speech: speechSnap
           ? { available: true, providers: speechSnap.providers.map(providerView), selection: speechSnap.selection }
