@@ -455,6 +455,7 @@ window.__ModuleLoader__.load({
     function Setup({ uiWorkspace, status, speech, onRefreshStatus, onStart, resumeInterviews = [] }) {
       const [mode, setMode] = useState('mock');
       const [topic, setTopic] = useState('');
+      const [customQuestion, setCustomQuestion] = useState('');
       const [language, setLanguage] = useState('java');
       const [techStack, setTechStack] = useState('');
       const [level, setLevel] = useState('staff');
@@ -532,13 +533,13 @@ window.__ModuleLoader__.load({
 
       const start = async () => {
         setError('');
-        if (mode === 'fundamentals' && !topic.trim()) return setError('请填写练习主题');
+        if (mode === 'fundamentals' && !topic.trim() && !customQuestion.trim()) return setError('请填写练习主题，或输入自定义问题');
         if (mode === 'scenario' && !topic.trim() && !referenceDirs.length) return setError('请填写场景主题，或选择简历/项目参考文件夹');
         if ((mode === 'mock' || mode === 'resume') && !techStack.trim()) return setError('请填写技术栈');
         if (!outputDir) return setError('请选择输出目录');
         setBusy(true);
         try {
-          const config = { mode, topic, language, techStack, level, questionCount, style, jd, focus, referenceDirs, outputDir, fixedProject };
+          const config = { mode, topic, customQuestion, language, techStack, level, questionCount, style, jd, focus, referenceDirs, outputDir, fixedProject };
           const interview = await request('/interviews', { body: config });
           fetch(API + '/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(config) }).catch(() => {});
           onStart(interview);
@@ -617,8 +618,10 @@ window.__ModuleLoader__.load({
         }
         if (mode === 'fundamentals') {
           return h(React.Fragment, null,
-            h(Field, { label: '练习主题', hint: '如：Java 并发、JVM、MySQL、Redis、Spring、计算机网络（出该技术的通用高频题）' },
-              h('input', { style: css.input, value: topic, onChange: (e) => setTopic(e.target.value) })),
+            h(Field, { label: '自定义问题（可选，填入后整场只练这一题）', hint: '手动输入一道面试题，作为本场唯一一题作答评分；不填则由 AI 围绕主题出题' },
+              h('textarea', { style: { ...css.input, minHeight: 70, resize: 'vertical' }, placeholder: '如：讲讲 HashMap 的扩容机制？', value: customQuestion, onChange: (e) => setCustomQuestion(e.target.value) })),
+            !customQuestion.trim() ? h(Field, { label: '练习主题', hint: '如：Java 并发、JVM、MySQL、Redis、Spring、计算机网络（出该技术的通用高频题）' },
+              h('input', { style: css.input, value: topic, onChange: (e) => setTopic(e.target.value) })) : null,
             h('div', { style: { display: 'flex', gap: 14, flexWrap: 'wrap' } },
               h('div', { style: { flex: 1, minWidth: 160 } }, levelField),
               h('div', { style: { flex: 1, minWidth: 160 } }, countField)),

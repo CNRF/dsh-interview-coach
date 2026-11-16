@@ -107,8 +107,13 @@ export class InterviewEngine {
       reportDir: null,
     };
     if (interview.stage === 'question') {
-      const { question, project, angle } = await this.generatePracticeQuestion(interview);
-      interview.questions.push({ index: 0, question, project, angle, attempts: [] });
+      if (normalized.customQuestion) {
+        // 自定义问题：直接作为第 1 题，整场只练这一题（不凑题量）
+        interview.questions.push({ index: 0, question: normalized.customQuestion, custom: true, attempts: [] });
+      } else {
+        const { question, project, angle } = await this.generatePracticeQuestion(interview);
+        interview.questions.push({ index: 0, question, project, angle, attempts: [] });
+      }
     }
     this.store.save(interview);
     return this.view(interview);
@@ -571,7 +576,9 @@ function validateConfig(config) {
   const mode = config.mode || 'mock';
   if (!Object.keys(MODES).includes(mode)) throw new Error('未知的练习模式');
   if (mode === 'fundamentals') {
-    if (!config.topic || !String(config.topic).trim()) throw new Error('请填写练习主题');
+    // 背八股：主题与自定义问题至少其一
+    const hasCustom = config.customQuestion && String(config.customQuestion).trim();
+    if ((!config.topic || !String(config.topic).trim()) && !hasCustom) throw new Error('请填写练习主题，或输入自定义问题');
   } else if (mode === 'scenario') {
     // 场景题：主题与参考文件夹至少其一（无主题时从简历项目经历改编）
     const hasTopic = config.topic && String(config.topic).trim();
@@ -591,13 +598,16 @@ function normalizeConfig(config) {
   const rawStack = String(config.techStack || '').trim().slice(0, 200);
   // 背八股/场景题：主题即技术方向，无需重复填技术栈
   const effectiveStack = rawStack || ((mode === 'fundamentals' || mode === 'scenario') ? rawTopic : '');
+  const customQuestion = mode === 'fundamentals' ? String(config.customQuestion || '').trim().slice(0, 1000) : '';
   return {
     mode,
-    topic: String(config.topic || '').trim().slice(0, 200),
+    topic: rawTopic,
+    customQuestion: customQuestion || null,
     language: ['java', 'python', 'go', 'cpp', 'javascript', 'typescript'].includes(config.language) ? config.language : 'java',
-    techStack: effectiveStack,
+    techStack: effectiveStack || (mode === 'fundamentals' && customQuestion ? '通用' : ''),
     level: ['mid', 'senior', 'staff', 'architect'].includes(config.level) ? config.level : 'staff',
-    questionCount: [5, 10, 15].includes(Number(config.questionCount)) ? Number(config.questionCount) : 10,
+    // 自定义问题：整场只练这一题，不凑题量
+    questionCount: customQuestion ? 1 : ([5, 10, 15].includes(Number(config.questionCount)) ? Number(config.questionCount) : 10),
     style: ['normal', 'pressure', 'project-deepdive'].includes(config.style) ? config.style : 'normal',
     jd: String(config.jd || '').slice(0, 4000),
     focus: {
